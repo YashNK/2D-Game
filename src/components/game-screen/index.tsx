@@ -95,7 +95,7 @@ export const GameScreen: React.FunctionComponent = () => {
   }, []);
 
   return (
-    <div className="game_screen_container pr-4">
+    <div className="game_screen_container">
       <div className="game_hud">
         <div className="score">Score: {score}</div>
         <button className="sound_toggle" onClick={toggleMute}>
