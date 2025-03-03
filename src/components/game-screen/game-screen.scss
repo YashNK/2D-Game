@@ -1,0 +1,27 @@
+.game_screen_container {
+  .game_hud {
+    background-color: var(--primary_color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 25px;
+    border-radius: 10px 10px 0px 0px;
+    .score {
+      font-size: 30px;
+      font-weight: 600;
+    }
+    .sound_toggle {
+      outline: none;
+      border: none;
+      background-color: transparent;
+      border-radius: 50%;
+      font-size: 35px;
+    }
+  }
+  .game_canvas {
+    outline: none;
+    max-width: 1600px;
+    max-height: 800px;
+    border-radius: 0px 0px 10px 10px;
+  }
+}

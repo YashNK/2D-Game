@@ -1,0 +1,15 @@
+.header_container {
+  background-image: url("../../assets//images/2D_Game_Map.png");
+  background-position: top;
+  background-size: cover;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-size: 40px;
+  border-radius: 0px 0px 90px 90px;
+  box-shadow: 0px 0px 30px 3px rgba(0, 0, 0, 0.5);
+  font-weight: 800;
+  color: rgb(255, 255, 255);
+}
