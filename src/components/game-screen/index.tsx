@@ -15,7 +15,7 @@ export const GameScreen: React.FunctionComponent = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState<number>(0);
   const [isMuted, setIsMuted] = useState<boolean>(audioManager.isMuted());
-  const [canvas] = useState<Canvas>({ width: 1600, height: 900 });
+  const [canvas] = useState<Canvas>({ width: 1200, height: 640 });
   const { sprites, spritesLoaded } = useSprites();
   const {
     character,

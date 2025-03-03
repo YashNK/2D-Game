@@ -2,9 +2,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
   .game_details_card {
     background-color: var(--primary_color);
-    height: 900px;
+    height: calc(100% - 30px);
     width: calc(100% - 50px);
     border-radius: 10px;
     display: flex;
