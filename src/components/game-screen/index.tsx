@@ -117,7 +117,7 @@ export const GameScreen: React.FunctionComponent = () => {
         setIsFullscreen(true);
         resizeCanvas();
       });
-    } else {
+    } else if (isFullscreen) {
       document.exitFullscreen().then(() => {
         setIsFullscreen(false);
         resizeCanvas();
