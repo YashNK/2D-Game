@@ -9,13 +9,16 @@ import { Renderer } from "../../services/renderer";
 import { CollisionDetector } from "../../services/collision-detector";
 import { Canvas } from "../../model/canvas";
 import { audioManager } from "../../utils/audio.fns";
+import { canvasHeight, canvasWidth, mapWidth } from "../../constants";
+import { convertTo2DArray } from "../../utils/common.fns";
+import { MainMapCollisions } from "../../constants/level1";
+import FullScreenIcon from "../../assets/images/full_screen.png";
 import "./game-screen.scss";
 
 export const GameScreen: React.FunctionComponent = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [score, setScore] = useState<number>(0);
-  const [isMuted, setIsMuted] = useState<boolean>(audioManager.isMuted());
-  const [canvas] = useState<Canvas>({ width: 1200, height: 640 });
+  const gameContainer = useRef<HTMLDivElement>(null);
+  const { mapData, setMapData } = useGameCanvas();
   const { sprites, spritesLoaded } = useSprites();
   const {
     character,
@@ -25,15 +28,15 @@ export const GameScreen: React.FunctionComponent = () => {
     frameIndex,
     setCharacter,
   } = useCharacter();
-  const { items, checkItemCollection } = useItems(
+  const [score, setScore] = useState<number>(0);
+  const { items, checkItemCollection, setItemData } = useItems(
     character,
     setCharacter,
-    setScore
+    setScore,
+    () => fadeToBlackAndChangeLevel
   );
-  const { mapData, collisionData } = useGameCanvas();
-  const renderer = useRef(new Renderer(canvas, mapData)).current;
   const collisionDetector = useRef(
-    new CollisionDetector(collisionData)
+    new CollisionDetector(convertTo2DArray(MainMapCollisions, mapWidth))
   ).current;
   const { keysPressed, handleKeyDown, handleKeyUp } = useKeyboardControls(
     character,
@@ -42,6 +45,14 @@ export const GameScreen: React.FunctionComponent = () => {
     isDashAvailable,
     collisionDetector
   );
+  const [isMuted, setIsMuted] = useState<boolean>(audioManager.isMuted());
+  const [canvas, setCanvas] = useState<Canvas>({
+    width: canvasWidth,
+    height: canvasHeight,
+  });
+  const [fadeOpacity, setFadeOpacity] = useState(1);
+  const [renderer, setRenderer] = useState(() => new Renderer(canvas, mapData));
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const gameLoop = useCallback(() => {
     if (keysPressed.size === 0) return null;
@@ -72,22 +83,84 @@ export const GameScreen: React.FunctionComponent = () => {
     spritesLoaded,
     renderer,
     frameIndex,
-    score,
     checkItemCollection,
   ]);
 
   useEffect(() => {
-    const playGameMusic = () => {
-      if (!audioManager.isMuted()) {
-        audioManager.play("game");
-      }
-      window.removeEventListener("click", playGameMusic);
-    };
-    window.addEventListener("click", playGameMusic);
-    return () => {
-      window.removeEventListener("click", playGameMusic);
-    };
+    canvasRef.current?.focus();
+    window.addEventListener("resize", resizeCanvas);
+    return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
+
+  const resizeCanvas = () => {
+    if (canvasRef.current) {
+      const newWidth = window.innerWidth;
+      const newHeight = window.innerHeight;
+      setCanvas({ width: newWidth, height: newHeight });
+      setMapData((prev) => {
+        const updatedMapData = {
+          ...prev,
+          currentLevel: prev.currentLevel,
+          currentLevelForeground: prev.currentLevelForeground,
+        };
+        setRenderer(
+          new Renderer({ width: newWidth, height: newHeight }, updatedMapData)
+        );
+        return updatedMapData;
+      });
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement && gameContainer.current) {
+      gameContainer.current.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+        resizeCanvas();
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+        resizeCanvas();
+      });
+    }
+  };
+
+  const fadeToBlackAndChangeLevel = (
+    newLevel: string,
+    newLevelForeground: string | null,
+    newLevelCollision: number[][],
+    newMapItems: number[],
+    characterXPosition: number,
+    characterYPosition: number
+  ) => {
+    setFadeOpacity(0);
+    setTimeout(() => {
+      setMapData((prev) => ({
+        ...prev,
+        currentLevel: newLevel,
+        currentLevelForeground: newLevelForeground,
+      }));
+      setCharacter((prev) => ({
+        ...prev,
+        mapX: characterXPosition,
+        mapY: characterYPosition,
+      }));
+      setRenderer(
+        new Renderer(canvas, {
+          ...mapData,
+          currentLevel: newLevel,
+          currentLevelForeground: newLevelForeground
+            ? newLevelForeground
+            : null,
+        })
+      );
+      collisionDetector.setCollisionData(newLevelCollision);
+      setItemData(convertTo2DArray(newMapItems, mapWidth));
+      setTimeout(() => {
+        setFadeOpacity(1);
+      }, 500);
+    }, 500);
+  };
 
   const toggleMute = useCallback(() => {
     audioManager.toggleMute();
@@ -95,30 +168,38 @@ export const GameScreen: React.FunctionComponent = () => {
   }, []);
 
   return (
-    <div className="game_screen_container">
-      <div className="game_hud">
+    <div ref={gameContainer} className="game_screen_container">
+      <div style={{ maxHeight: canvas.height }} className="game_hud">
+        <img
+          className="full_screen_icon"
+          onClick={toggleFullscreen}
+          src={FullScreenIcon}
+        />
         <div className="score">Score: {score}</div>
-        <button className="sound_toggle" onClick={toggleMute}>
+        <span className="sound_toggle" onClick={toggleMute}>
           {isMuted ? "🔇" : "🔊"}
-        </button>
+        </span>
+        <div className={`dash_hud ${isDashAvailable ? "hidden" : ""}`}>
+          Dash Blocked
+        </div>
+        <canvas
+          className={`game_canvas ${fadeOpacity === 0 ? "opacity_0" : ""}`}
+          ref={canvasRef}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            handleKeyDown(e);
+            startGameLoop();
+          }}
+          onKeyUp={(e) => {
+            handleKeyUp(e);
+            if (keysPressed.size === 0) {
+              stopGameLoop();
+            }
+          }}
+          width={canvas.width}
+          height={canvas.height}
+        ></canvas>
       </div>
-      <canvas
-        className="game_canvas"
-        ref={canvasRef}
-        tabIndex={0}
-        onKeyDown={(e) => {
-          handleKeyDown(e);
-          startGameLoop();
-        }}
-        onKeyUp={(e) => {
-          handleKeyUp(e);
-          if (keysPressed.size === 0) {
-            stopGameLoop();
-          }
-        }}
-        width={canvas.width}
-        height={canvas.height}
-      ></canvas>
     </div>
   );
 };

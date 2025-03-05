@@ -5,6 +5,7 @@ import {
   baseTileSize,
   Item1,
   SuperItem,
+  CoinInsideHouse,
 } from "../constants";
 import { MapData } from "../model/map";
 import { Item } from "../model/item/item";
@@ -16,7 +17,7 @@ export class Renderer {
   private canvas: Canvas;
   private mapData: MapData;
   private mapImage: HTMLImageElement;
-  private mapImageForeground: HTMLImageElement;
+  private mapImageForeground: HTMLImageElement | null;
   private coinImage: HTMLImageElement;
   private diamondImage: HTMLImageElement;
 
@@ -26,7 +27,8 @@ export class Renderer {
     this.mapImage = new Image();
     this.mapImage.src = mapData.currentLevel;
     this.mapImageForeground = new Image();
-    this.mapImageForeground.src = mapData.currentLevelForeground;
+    if (mapData.currentLevelForeground)
+      this.mapImageForeground.src = mapData.currentLevelForeground;
     this.coinImage = new Image();
     this.coinImage.src = Coin;
     this.diamondImage = new Image();
@@ -118,17 +120,18 @@ export class Renderer {
     viewX: number,
     viewY: number
   ): void {
-    context.drawImage(
-      this.mapImageForeground,
-      viewX,
-      viewY,
-      this.canvas.width,
-      this.canvas.height,
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height
-    );
+    if (this.mapImageForeground)
+      context.drawImage(
+        this.mapImageForeground,
+        viewX,
+        viewY,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
   }
 
   private drawItems(
@@ -148,7 +151,7 @@ export class Renderer {
           itemY <= this.canvas.height + baseTileSize
         ) {
           context.save();
-          if (item.type === Item1) {
+          if (item.type === Item1 || item.type === CoinInsideHouse) {
             context.drawImage(this.coinImage, itemX, itemY, 32, 32);
           }
           if (item.type === SuperItem) {

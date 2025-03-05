@@ -6,7 +6,6 @@ export type CharacterData = {
   mapY: number;
   isWalking: boolean;
   isDashing: boolean;
-  isUltimate: boolean;
   direction: string;
   width: number;
   height: number;

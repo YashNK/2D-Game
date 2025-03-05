@@ -1,35 +1,70 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { convertTo2DArray } from "../utils/common.fns";
-import { Collectables } from "../constants/collectables";
 import {
   mapWidth,
   baseTileSize,
   zoomFactor,
-  characterWidth,
-  characterHeight,
   Item1,
-  characterSpeed,
+  AudioSounds,
+  SuperItem,
+  Door,
+  DoorToMainMap,
+  CoinInsideHouse,
   superJoeSpeed,
   superJoeWidth,
   superJoeHeight,
-  AudioSounds,
-  SuperItem,
+  characterSpeed,
+  characterWidth,
+  characterHeight,
 } from "../constants";
 import { audioManager } from "../utils/audio.fns";
 import { Item, ItemsMap } from "../model/item/item";
 import { CharacterData } from "../model/character";
+import {
+  MainMapCharacterXPosition,
+  MainMapCharacterYPosition,
+  MainMapCollectables,
+  MainMapCollisions,
+} from "../constants/level1";
+import {
+  House1CharacterXPosition,
+  House1CharacterYPosition,
+  House1Collectables,
+  House1Collisions,
+} from "../constants/level2";
+import MainMap from "../assets/images/2D_Game_Map.png";
+import MainMapForeGround from "../assets/images/2D_Game_Map_Foreground.png";
+import House from "../assets/images/House_Interior.png";
 
 export function useItems(
   character: CharacterData,
   setCharacter: React.Dispatch<React.SetStateAction<CharacterData>>,
-  setScore: React.Dispatch<React.SetStateAction<number>>
+  setScore: React.Dispatch<React.SetStateAction<number>>,
+  getLevelTransitionFunction?: () => (
+    newLevel: string,
+    newLevelForeground: string | null,
+    newCollision: number[][],
+    newMapItems: number[],
+    characterXPosition: number,
+    characterYPosition: number
+  ) => void
 ) {
   const prevPositionRef = useRef({ x: character.mapX, y: character.mapY });
   const timeoutRef = useRef<number | null>(null);
-  const [itemsData] = useState<ItemsMap>(() =>
-    convertTo2DArray(Collectables, mapWidth)
+  const [itemsData, setItemData] = useState<ItemsMap>(() =>
+    convertTo2DArray(MainMapCollectables, mapWidth)
   );
-  const [items, setItems] = useState<Item[]>(() => {
+  const [items, setItems] = useState<Item[]>([
+    {
+      id: 0,
+      x: 0,
+      y: 0,
+      type: 0,
+      collected: false,
+    },
+  ]);
+
+  useEffect(() => {
     const itemsList: Item[] = [];
     for (let y = 0; y < itemsData.length; y++) {
       for (let x = 0; x < itemsData[y].length; x++) {
@@ -44,8 +79,8 @@ export function useItems(
         }
       }
     }
-    return itemsList;
-  });
+    setItems(itemsList);
+  }, [itemsData]);
 
   const checkItemCollection = useCallback(() => {
     if (
@@ -66,13 +101,13 @@ export function useItems(
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance < collectionRadius) {
             let points = 0;
-            if (item.type === Item1) {
+            if (item.type === Item1 || item.type === CoinInsideHouse) {
               audioManager.play(AudioSounds.COIN);
               points = 5;
             }
             if (item.type === SuperItem) {
               audioManager.play(AudioSounds.COIN);
-              points = 20;
+              points = 5;
               setCharacter((prev) => ({
                 ...prev,
                 speed: superJoeSpeed,
@@ -92,6 +127,42 @@ export function useItems(
                 timeoutRef.current = null;
               }, 1000);
             }
+            if (item.type === Door) {
+              const transitionFunction =
+                getLevelTransitionFunction && getLevelTransitionFunction();
+              const newCollisions = convertTo2DArray(
+                House1Collisions,
+                mapWidth
+              );
+              if (transitionFunction) {
+                transitionFunction(
+                  House,
+                  null,
+                  newCollisions,
+                  House1Collectables,
+                  House1CharacterXPosition,
+                  House1CharacterYPosition
+                );
+              }
+            }
+            if (item.type === DoorToMainMap) {
+              const transitionFunction =
+                getLevelTransitionFunction && getLevelTransitionFunction();
+              const newCollisions = convertTo2DArray(
+                MainMapCollisions,
+                mapWidth
+              );
+              if (transitionFunction) {
+                transitionFunction(
+                  MainMap,
+                  MainMapForeGround,
+                  newCollisions,
+                  MainMapCollectables,
+                  MainMapCharacterXPosition,
+                  MainMapCharacterYPosition
+                );
+              }
+            }
             scoreIncrement += points;
             itemsChanged = true;
             return { ...item, collected: true };
@@ -104,7 +175,13 @@ export function useItems(
       }
       return itemsChanged ? newItems : prevItems;
     });
-  }, [character.mapX, character.mapY, setScore, setCharacter]);
+  }, [
+    character.mapX,
+    character.mapY,
+    setScore,
+    setCharacter,
+    getLevelTransitionFunction,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -114,5 +191,5 @@ export function useItems(
     };
   }, []);
 
-  return { items, checkItemCollection };
+  return { items, checkItemCollection, itemsData, setItemData };
 }

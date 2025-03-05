@@ -2,8 +2,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { CharacterData } from "../model/character";
 import {
   characterSpeed,
-  initialXPosition,
-  initialYPosition,
   characterXPosition,
   characterYPosition,
   dashSpeedMultiplier,
@@ -12,6 +10,10 @@ import {
   characterHeight,
   characterWidth,
 } from "../constants";
+import {
+  MainMapCharacterXPosition,
+  MainMapCharacterYPosition,
+} from "../constants/level1";
 
 export function useCharacter() {
   const [frameIndex, setFrameIndex] = useState<number>(0);
@@ -23,11 +25,10 @@ export function useCharacter() {
     x: characterXPosition,
     y: characterYPosition,
     speed: characterSpeed,
-    mapX: initialXPosition,
-    mapY: initialYPosition,
+    mapX: MainMapCharacterXPosition,
+    mapY: MainMapCharacterYPosition,
     isWalking: false,
     isDashing: false,
-    isUltimate: false,
     direction: "down-right",
     width: characterWidth,
     height: characterHeight,
